@@ -1,0 +1,86 @@
+---
+title: "statinf_cp1b_joannanw"
+author: "joannanw"
+date: "Sunday, March 22, 2015"
+output: word_document
+---
+
+The goal of this assignment is to explore and analyze the ToothGrowth data according to confidence intervals and hypothesis testing. The assignment will cover basic analyses to justification on the conclusion of the experiment.
+
+# Analyses
+
+## 1. Load the ToothGrowth data and perform some basic exploratory data analyses.
+
+```{r}
+data(ToothGrowth)
+str(ToothGrowth)
+head(ToothGrowth)
+
+library(dplyr)
+data <- ToothGrowth %>% 
+        group_by(supp,dose) %>% 
+        summarise(Mean=mean(len),Min=min(len),Max=max(len),"SD"=sd(len))
+
+library(reshape2)
+wideData <- dcast(melt(data,id.vars=c("supp","dose")),dose~supp+variable,fun.aggregate=sum)
+wideData
+```
+
+The `ToothGrowth` data in the R datasets package is a set of 60 observations, length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1 and 2 mg) with each of two delivery methods (orange juice or ascorbic acid)
+
+## 2. Provide a basic summary of the data.
+
+```{r}
+library(ggplot2)
+ggplot(data=ToothGrowth, aes(x=as.factor(dose), y=len, fill=supp)) +
+geom_boxplot(notch = F, show_guide = TRUE) +
+facet_grid(. ~ supp) +
+xlab("Dose in miligrams") +
+ylab("Tooth length") +
+ggtitle("Tooth Growth in Guinea Pigs by Supplements")
+```
+
+The graph shows that as the dose of Orange Juice and Ascorbic Acid increases, so does the length of the tooth. The overall data seems to show that doses of Orange Juice generally yields longer tooth length than doses of Ascorbic Acid. However, as the dose of each supplement reaches 2, the average length of tooth reaches around the same value, indicating possible lack of effectiveness of the supplements.
+
+## 3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose.
+
+* Which supplement yields greater effect on tooth growth?
+
+To test this, construct a table of hypothetical output using the Student's t-Test on the length of tooth by supplement type. Assume that Orange Juice has more effect on tooth growth.
+
+H0: Mu_OJ - Mu_VC = 0,
+Ha: Mu_OJ - Mu_VC > 0
+
+```{r}
+VC <- ToothGrowth[ToothGrowth$supp == "VC", 1]
+OJ <- ToothGrowth[ToothGrowth$supp == "OJ", 1]
+var(VC); var(OJ)
+test0 <- t.test(OJ, VC, alternative = "greater", var.equal = FALSE, paired = TRUE) 
+# alternative = "less" indicates VC less than OJ. Assume different standard deviation and paired samples.
+# Or use t.test(len ~ supp, data = ToothGrowth, alternative = "greater", var.equal = FALSE, paired = TRUE)
+test0
+```
+
+The t-test gives p = `r test0$p.value` < 0.05, this means the null hypothesis (H0) can be rejected. There is strong evidence of a mean increase in tooth length between using Orange Juice versus using Ascorbic Acid.
+
+* Does more dosage lead to longer tooth length?
+
+Assume that higher dosage causes longer tooth length. 
+
+```{r}
+test1 <- t.test(len ~ dose, data=subset(ToothGrowth, dose %in% c(0.5,1.0)), var.equal=T, alternative="l")
+test1
+test2 <- t.test(len ~ dose, data=subset(ToothGrowth, dose %in% c(1.0, 2.0)), var.equal=T, alternative="l")
+test2
+test3 <- t.test(len ~ dose, data=subset(ToothGrowth, dose %in% c(0.5, 2.0)), var.equal=T, alternative="l")
+test3
+```
+
+The t-test gives p < 0.05, which means that the null hypothesis can be rejected. The bigger the dosage of the supplement, the longer the tooth length. 
+
+
+## 4. State your conclusions and the assumptions needed for your conclusions. 
+
+* Each supplement has different effect on the test subjects.
+* Dosage level has different effect on the test subjects.
+* The same test subjects are used to test the supplements and dosage levels.
